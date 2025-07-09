@@ -1,0 +1,266 @@
+#include <iostream>
+#include <string>
+#include <algorithm>
+#include <vector>
+
+struct Node {
+    int key;
+    Node *left;
+    Node *right;
+    int height;
+
+    Node(int k) : key(k), left(nullptr), right(nullptr), height(1) {}
+};
+
+class AVLTree {
+public:
+    AVLTree() : root(nullptr) {}
+
+    ~AVLTree() {
+       destroyTree(root);
+    }
+
+    void insert(int key) {
+        root = insertRecursive(root, key);
+    }
+
+    void deleteNode(int key) {
+        root = deleteRecursive(root, key);
+    }
+
+    void display() {
+        _display_recursive(root, 0, "Korijen:");
+    }
+
+private:
+    Node *root;
+
+    void destroyTree(Node* node) {
+        if (node) {
+            destroyTree(node->left);
+            destroyTree(node->right);
+            delete node;
+        }
+    }
+
+    int getHeight(Node* node) {
+        if (node == nullptr)
+            return 0;
+        return node->height;
+    }
+
+    void updateHeight(Node* node) {
+        if (node == nullptr) return;
+        node->height = 1 + std::max(getHeight(node->left), getHeight(node->right));
+    }
+
+    int getBalance(Node* node) {
+        if (node == nullptr)
+            return 0;
+        return getHeight(node->left) - getHeight(node->right);
+    }
+
+    Node* rightRotate(Node* y) {
+        Node *x = y->left;
+        Node *T2 = x->right;
+
+        x->right = y;
+        y->left = T2;
+
+        updateHeight(y);
+        updateHeight(x);
+
+        return x;
+    }
+
+    Node* leftRotate(Node* x) {
+        Node *y = x->right;
+        Node *T1 = y->left;
+
+        y->left = x;
+        x->right = T1;
+        
+        updateHeight(x);
+        updateHeight(y);
+
+        return y;
+    }
+
+    Node* insertRecursive(Node* node, int key) {
+        if (node == nullptr)
+            return new Node(key);
+
+        if (key < node->key)
+            node->left = insertRecursive(node->left, key);
+        else if (key > node->key)
+            node->right = insertRecursive(node->right, key);
+        else
+            return node;
+
+        updateHeight(node);
+
+        int balance = getBalance(node);
+
+        if (balance > 1 && key < node->left->key)
+            return rightRotate(node);
+
+        if (balance < -1 && key > node->right->key)
+            return leftRotate(node);
+
+        if (balance > 1 && key > node->left->key) {
+            node->left = leftRotate(node->left);
+            return rightRotate(node);
+        }
+
+        if (balance < -1 && key < node->right->key) {
+            node->right = rightRotate(node->right);
+            return leftRotate(node);
+        }
+
+        return node;
+    }
+
+    Node* minValueNode(Node* node) {
+        Node* current = node;
+        while (current && current->left != nullptr)
+            current = current->left;
+        return current;
+    }
+
+    Node* deleteRecursive(Node* node, int key) {
+        if (node == nullptr)
+            return node;
+
+        if (key < node->key)
+            node->left = deleteRecursive(node->left, key);
+        else if (key > node->key)
+            node->right = deleteRecursive(node->right, key);
+        else {
+            if (node->left == nullptr) {
+                Node *temp = node->right;
+                delete node;
+                return temp;
+            }
+            else if (node->right == nullptr) {
+                Node *temp = node->left;
+                delete node;
+                return temp;
+            }
+
+            Node* temp = minValueNode(node->right);
+            node->key = temp->key;
+            node->right = deleteRecursive(node->right, temp->key);
+        }
+
+        if (node == nullptr)
+            return node;
+
+        updateHeight(node);
+
+        int balance = getBalance(node);
+
+        if (balance > 1 && getBalance(node->left) >= 0)
+            return rightRotate(node);
+
+        if (balance > 1 && getBalance(node->left) < 0) {
+            node->left = leftRotate(node->left);
+            return rightRotate(node);
+        }
+
+        if (balance < -1 && getBalance(node->right) <= 0)
+            return leftRotate(node);
+
+        if (balance < -1 && getBalance(node->right) > 0) {
+            node->right = rightRotate(node->right);
+            return leftRotate(node);
+        }
+
+        return node;
+    }
+
+    void _display_recursive(Node* current_node, int level, const std::string& prefix) {
+        if (current_node == nullptr) {
+            if (level == 0) {
+                std::cout << "Stablo je prazno." << std::endl;
+            }
+            return;
+        }
+
+        for (int i = 0; i < level * 4; ++i) {
+            std::cout << " ";
+        }
+        std::cout << prefix << current_node->key
+                  << " (BF:" << getBalance(current_node)
+                  << ", H:" << current_node->height << ")" << std::endl;
+
+        if (current_node->left != nullptr || current_node->right != nullptr) {
+            if (current_node->left) {
+                _display_recursive(current_node->left, level + 1, "L---");
+            } else {
+                for (int i = 0; i < (level + 1) * 4; ++i) std::cout << " ";
+                std::cout << "L---[Prazno]" << std::endl;
+            }
+
+            if (current_node->right) {
+                _display_recursive(current_node->right, level + 1, "R---");
+            } else {
+                for (int i = 0; i < (level + 1) * 4; ++i) std::cout << " ";
+                std::cout << "R---[Prazno]" << std::endl;
+            }
+        }
+    }
+};
+
+int main() {
+    AVLTree avl_stablo;
+    std::cout << "--- DODAVANJE ELEMENATA ---" << std::endl;
+    std::vector<int> elementi_za_dodavanje = {10, 20, 30, 40, 50, 25};
+
+    for (int element : elementi_za_dodavanje) {
+        std::cout << "\nDodavanje elementa: " << element << std::endl;
+        avl_stablo.insert(element);
+        avl_stablo.display();
+        for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+    }
+
+    std::cout << "\n\n--- BRISANJE ELEMENATA ---" << std::endl;
+    
+    int brisi_10 = 10;
+    std::cout << "\nStablo prije brisanja elementa " << brisi_10 << ":" << std::endl;
+    avl_stablo.display();
+    std::cout << "\nBrisanje elementa: " << brisi_10 << std::endl;
+    avl_stablo.deleteNode(brisi_10);
+    avl_stablo.display();
+    for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+
+    int brisi_40 = 40;
+    std::cout << "\nStablo prije brisanja elementa " << brisi_40 << ":" << std::endl;
+    avl_stablo.display();
+    std::cout << "\nBrisanje elementa: " << brisi_40 << std::endl;
+    avl_stablo.deleteNode(brisi_40);
+    avl_stablo.display();
+    for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+    
+    int brisi_50 = 50;
+    std::cout << "\nStablo prije brisanja elementa " << brisi_50 << ":" << std::endl;
+    avl_stablo.display();
+    std::cout << "\nBrisanje elementa: " << brisi_50 << std::endl;
+    avl_stablo.deleteNode(brisi_50);
+    avl_stablo.display();
+    for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+
+    int brisi_30 = 30; 
+    std::cout << "\nStablo prije brisanja elementa " << brisi_30 << ":" << std::endl;
+    avl_stablo.display();
+    std::cout << "\nBrisanje elementa: " << brisi_30 << std::endl;
+    avl_stablo.deleteNode(brisi_30); 
+    avl_stablo.display();
+    for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+
+    std::cout << "\nPokušaj brisanja nepostojećeg elementa (100):" << std::endl;
+    avl_stablo.deleteNode(100);
+    avl_stablo.display();
+    for(int i = 0; i < 20; ++i) std::cout << "-"; std::cout << std::endl;
+
+    return 0;
+}
